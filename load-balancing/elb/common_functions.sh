@@ -20,7 +20,7 @@ ELB_LIST=$(cat /opt/app_vars/ELASTIC_LOAD_BALANCER)
 ASGMINDECREMENTED_STORE=/opt/app_vars/ASGMINDECREMENTED
 asg_min_decremented()
 {
-    cat $ASGMINDECREMENTED_STORE
+    echo $(cat $ASGMINDECREMENTED_STORE)
 }
 
 # Under normal circumstances, you shouldn't need to change anything below this line.
