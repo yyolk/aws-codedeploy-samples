@@ -14,10 +14,14 @@
 # permissions and limitations under the License.
 
 # ELB_LIST defines which Elastic Load Balancers this instance should be part of.
-ELB_LIST=""
+ELB_LIST=$(cat /opt/app_vars/ELASTIC_LOAD_BALANCER)
 
 # Flag for determining if the auto scaling group min was decremented at any point during execution
-ASGMINDECREMENTED="FALSE"
+ASGMINDECREMENTED_STORE=/opt/app_vars/ASGMINDECREMENTED
+asg_min_decremented()
+{
+    cat $ASGMINDECREMENTED_STORE
+}
 
 # Under normal circumstances, you shouldn't need to change anything below this line.
 # -----------------------------------------------------------------------------
@@ -125,7 +129,7 @@ autoscaling_enter_standby() {
             msg "Failed to reduce ASG $asg_name's minimum size to $new_min. Cannot put this instance into Standby."
             return 1
         else
-            ASGMINDECREMENTED="TRUE"
+            echo TRUE > $ASGMINDECREMENTED_STORE
         fi
     fi
 
@@ -191,8 +195,8 @@ autoscaling_exit_standby() {
         msg "Instance $instance_id did not make it to InService after $wait_timeout seconds"
         return 1
     fi
-    
-    if [ $ASGMINDECREMENTED == "TRUE" ]; then
+
+    if [ "$(asg_min_decremented)" == "TRUE" ]; then
         local min_desired=$($AWS_CLI autoscaling describe-auto-scaling-groups \
             --auto-scaling-group-name $asg_name \
             --query 'AutoScalingGroups[0].[MinSize, DesiredCapacity]' \
@@ -217,7 +221,7 @@ autoscaling_exit_standby() {
     else
         msg "Auto scaling group was not decremented previously, not incrementing min value"
     fi
-
+    echo FALSE > $ASGMINDECREMENTED_STORE
     return 0
 }
 
@@ -386,7 +390,7 @@ get_elb_list() {
 
     if [ -z "$elb_list" ]; then
         return 1
-    else 
+    else
         msg "Got load balancer list of: $elb_list"
         INSTANCE_ELBS=$elb_list
         return 0
